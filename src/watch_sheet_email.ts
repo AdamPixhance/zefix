@@ -5,7 +5,6 @@ import path from "path";
 import nodemailer from "nodemailer";
 import axios from "axios";
 
-
 type State = Record<
   string,
   { hash: string; updatedAt: string; name?: string; props?: any }
@@ -17,7 +16,11 @@ function stableStringify(obj: any): string {
   if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
   if (Array.isArray(obj)) return "[" + obj.map(stableStringify).join(",") + "]";
   const keys = Object.keys(obj).sort();
-  return "{" + keys.map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k])).join(",") + "}";
+  return (
+    "{" +
+    keys.map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k])).join(",") +
+    "}"
+  );
 }
 
 function sha256(obj: any): string {
@@ -48,11 +51,14 @@ function parseCsv(csvText: string): WatchItem[] {
     const uid = cols[uidIdx]?.replace(/^"|"$/g, "");
     if (!uid) continue;
 
-    const label = labelIdx !== -1 ? cols[labelIdx]?.replace(/^"|"$/g, "") : undefined;
+    const label =
+      labelIdx !== -1 ? cols[labelIdx]?.replace(/^"|"$/g, "") : undefined;
 
     let active: boolean | undefined = true;
     if (activeIdx !== -1) {
-      const raw = (cols[activeIdx] ?? "").replace(/^"|"$/g, "").toLowerCase();
+      const raw = (cols[activeIdx] ?? "")
+        .replace(/^"|"$/g, "")
+        .toLowerCase();
       active = raw === "" ? true : raw === "true" || raw === "1" || raw === "yes";
     }
 
@@ -114,6 +120,30 @@ async function sendEmail(subject: string, text: string) {
   await transporter.sendMail({ from, to, subject, text });
 }
 
+async function fetchCsvText(sheetCsvUrl: string): Promise<string> {
+  // Google “published CSV” links often download as a file in browsers.
+  // In CI, treat the response as bytes and decode.
+  const resp = await axios.get(sheetCsvUrl, {
+    responseType: "arraybuffer",
+    maxRedirects: 10,
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      Accept: "text/csv,*/*",
+    },
+  });
+
+  const csvText = Buffer.from(resp.data).toString("utf8");
+
+  // Basic sanity check: must include the uid header
+  if (!csvText.toLowerCase().includes("uid")) {
+    throw new Error(
+      `Sheet did not return expected CSV. First 200 chars:\n${csvText.slice(0, 200)}`
+    );
+  }
+
+  return csvText;
+}
+
 async function main() {
   const sheetCsvUrl = process.env.SHEET_CSV_URL as string;
   if (!sheetCsvUrl) throw new Error("Missing SHEET_CSV_URL");
@@ -127,16 +157,7 @@ async function main() {
   const statePath = path.resolve(process.cwd(), "watch_state.json");
   const state = loadState(statePath);
 
-  const resp = await axios.get(sheetCsvUrl, {
-  maxRedirects: 0,
-  validateStatus: (s) => s >= 200 && s < 400,
-});
-const csvText = resp.data as string;
-
-if (typeof csvText !== "string" || !csvText.toLowerCase().includes("uid")) {
-  throw new Error(`Sheet did not return CSV. First 200 chars:\n${String(csvText).slice(0, 200)}`);
-}
-
+  const csvText = await fetchCsvText(sheetCsvUrl);
   const watchItems = parseCsv(csvText).filter((i) => i.active !== false);
 
   const now = new Date().toISOString();
@@ -202,7 +223,7 @@ if (typeof csvText !== "string" || !csvText.toLowerCase().includes("uid")) {
 
       state[uidKey] = { hash: newHash, updatedAt: now, name: props.name ?? undefined, props };
     } else {
-      // keep props stored, but update timestamp if you want:
+      // keep props stored, but update timestamp
       state[uidKey] = { ...prev, updatedAt: now };
     }
   }
