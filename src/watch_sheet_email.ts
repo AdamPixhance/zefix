@@ -149,9 +149,10 @@ async function main() {
   if (!sheetCsvUrl) throw new Error("Missing SHEET_CSV_URL");
 
   const zefix = new Zefix({
-    usr: process.env.USR as string,
-    pwd: process.env.PWD as string,
-    endpoint: process.env.ENDPOINT as string,
+    usr: (process.env.ZEFIX_USR ?? process.env.USR) as string,
+    // IMPORTANT: never rely on PWD in GitHub Actions (it's the working directory)
+    pwd: (process.env.ZEFIX_PWD ?? process.env.PWD) as string,
+    endpoint: (process.env.ZEFIX_ENDPOINT ?? process.env.ENDPOINT) as string,
   });
 
   const statePath = path.resolve(process.cwd(), "watch_state.json");
