@@ -161,7 +161,7 @@ async function main() {
   const csvText = await fetchCsvText(sheetCsvUrl);
   const watchItems = parseCsv(csvText).filter((i) => i.active !== false);
 
-  const now = new Date().toISOString();
+  const now = new Date().toLocaleString("de-CH", { timeZone: "Europe/Zurich" });
   const changes: Array<{ uid: string; label?: string; url?: string; diffs: string[] }> = [];
   const baselined: string[] = [];
   const checked: string[] = [];
@@ -238,8 +238,11 @@ async function main() {
       : `ZEFIX Watch — ${changes.length} changed (${now})`;
 
   const lines: string[] = [];
-  lines.push(`Run time: ${now}`);
+  (`Run time: ${now}`);
   lines.push(`Checked: ${checked.length}`);
+  lines.push("");
+  lines.push("Checked companies:");
+  for (const c of checked) lines.push(`- ${c}`);
   lines.push("");
 
   if (baselined.length > 0) {
