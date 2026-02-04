@@ -127,7 +127,16 @@ async function main() {
   const statePath = path.resolve(process.cwd(), "watch_state.json");
   const state = loadState(statePath);
 
-  const csvText = (await axios.get(sheetCsvUrl)).data as string;
+  const resp = await axios.get(sheetCsvUrl, {
+  maxRedirects: 0,
+  validateStatus: (s) => s >= 200 && s < 400,
+});
+const csvText = resp.data as string;
+
+if (typeof csvText !== "string" || !csvText.toLowerCase().includes("uid")) {
+  throw new Error(`Sheet did not return CSV. First 200 chars:\n${String(csvText).slice(0, 200)}`);
+}
+
   const watchItems = parseCsv(csvText).filter((i) => i.active !== false);
 
   const now = new Date().toISOString();
