@@ -1,0 +1,51 @@
+name: ZEFIX Watch
+
+on:
+  schedule:
+    - cron: "0 */12 * * *" # every 12 hours
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install
+        run: npm ci
+
+      - name: Run watcher
+        env:
+          USR: ${{ secrets.ZEFIX_USR }}
+          PWD: ${{ secrets.ZEFIX_PWD }}
+          ENDPOINT: ${{ secrets.ZEFIX_ENDPOINT }}
+          SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
+
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+          ALERT_FROM: ${{ secrets.ALERT_FROM }}
+        run: npx ts-node ./src/watch_sheet_email.ts
+
+      - name: Commit updated state
+        run: |
+          if git status --porcelain | grep -q "watch_state.json"; then
+            git config user.name "zefix-watch-bot"
+            git config user.email "zefix-watch-bot@users.noreply.github.com"
+            git add watch_state.json
+            git commit -m "Update watch_state.json"
+            git push
+          else
+            echo "No state changes to commit."
+          fi
