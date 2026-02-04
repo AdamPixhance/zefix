@@ -3,6 +3,8 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import nodemailer from "nodemailer";
+import axios from "axios";
+
 
 type State = Record<
   string,
@@ -125,7 +127,7 @@ async function main() {
   const statePath = path.resolve(process.cwd(), "watch_state.json");
   const state = loadState(statePath);
 
-  const csvText = await fetch(sheetCsvUrl).then((r) => r.text());
+  const csvText = (await axios.get(sheetCsvUrl)).data as string;
   const watchItems = parseCsv(csvText).filter((i) => i.active !== false);
 
   const now = new Date().toISOString();
