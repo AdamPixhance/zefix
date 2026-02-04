@@ -25,9 +25,9 @@ jobs:
 
       - name: Run watcher
         env:
-          USR: ${{ secrets.ZEFIX_USR }}
-          PWD: ${{ secrets.ZEFIX_PWD }}
-          ENDPOINT: ${{ secrets.ZEFIX_ENDPOINT }}
+          ZEFIX_USR: ${{ secrets.ZEFIX_USR }}
+          ZEFIX_PWD: ${{ secrets.ZEFIX_PWD }}
+          ZEFIX_ENDPOINT: ${{ secrets.ZEFIX_ENDPOINT }}
           SHEET_CSV_URL: ${{ secrets.SHEET_CSV_URL }}
 
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
