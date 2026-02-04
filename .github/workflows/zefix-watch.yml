@@ -2,7 +2,10 @@ name: ZEFIX Watch
 
 on:
   schedule:
-    - cron: "0 */12 * * *" # every 12 hours
+    # 06:00 & 18:00 Zurich (CET)
+    - cron: "0 5,17 * * *"
+    # 06:00 & 18:00 Zurich (CEST)
+    - cron: "0 4,16 * * *"
   workflow_dispatch: {}
 
 permissions:
